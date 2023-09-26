@@ -1,39 +1,30 @@
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Creating a Stunning Personal Profile Card with HTML and CSS</title>
-    <link rel="stylesheet" type="text/css" href="style.css">
-</head>
-
-<body>
     <?php
     session_start(); 
-    include "../header.php";
-    include "../db.php";
+    include "../admin/attachments/header.php";
+    include "../admin/attachments/navbar.php";
 
+    include "../admin/DB/db.php";
+    // Check if the user is logged in (adjust the condition as needed)
     if (!isset($_SESSION['user_id'])) {
-        echo "User is not logged in."; // You can redirect to a login page here
+        // Redirect to the login page or display an error message
+        header("Location: /todoList/admin/auth/login.php");
         exit();
     }
 
     $user_id = $_SESSION['user_id'];
 
-    // Query to retrieve user data
-    $query = "SELECT * FROM users INNER JOIN profiles on users.id = profiles.user_id WHERE users.id = $user_id";
-    $result = mysqli_query($conn, $query);
-
-    // Check if the query executed successfully
-    if (!$result) {
-        echo "Error: " . mysqli_error($conn);
-    } else {
+    // Query to retrieve user data]
+    $stmt = $conn->prepare("SELECT * FROM users INNER JOIN profiles ON users.id = profiles.user_id WHERE users.id = ?");
+    $stmt->bind_param("i", $user_id);
+    
+    if ($stmt->execute()) {
+        // Store the result in a variable
+        $result = $stmt->get_result();
+    
         // Check if user data was found
-        if (mysqli_num_rows($result) > 0) {
+        if ($result->num_rows > 0) {
             // Fetch and display user data
-            $row = mysqli_fetch_assoc($result);
+            $row = $result->fetch_assoc();
             $user_name = $row['first_name'] . ' ' . $row['last_name'];
             $user_age = date('Y') - $row['birth_y'];
             $user_email = $row['email'];
@@ -43,11 +34,11 @@
 
             echo '
             <div class="card">
-                <div class="left-container"> <img src="https://cdn.pixabay.com/photo/2015/01/08/18/29/entrepreneur-593358__480.jpg" alt="Profile Image">
+                <div class="left-container"> <img src="/todoList/assets/userimg.png" alt="Profile Image">
                     <h2><span>' . $user_name . '</span></h2>
                     <p>' . $user_profession . '</p>
                     <p class="description">' . $bio . '</p>
-                    <form action="/todoList/logout" method="post">
+                    <form action="/todoList/admin/logout.php" method="post">
                         <button type="submit">Log Out</button>
                     </form>
                 </div>
@@ -83,18 +74,10 @@
         }
 
         // Free the result set
-        mysqli_free_result($result);
+        $result->free_result();
     }
 
     // Close the database connection
-    mysqli_close($conn);
-
+    $conn->close();
+    include "../admin/attachments/footer.php";
     ?>
-
-
-
-
-
-</body>
-
-</html>

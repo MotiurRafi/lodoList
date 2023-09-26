@@ -1,21 +1,24 @@
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SignIn</title>
-</head>
-
-<body>
     <?php
+    include "../attachments/header.php";
     // Start the session
     session_start();
-    include "../db.php";
 
+    // Include the database connection file (assuming db.php contains your database connection)
+    include "../DB/db.php";
+
+    // Check if the user is already logged in, redirect if they are
+    if (isset($_SESSION['user_id'])) {
+        // Redirect to the home page or display an error message
+        header("Location: /todoList");
+        exit();
+    }
+
+    // Initialize an error message variable
     $errorMessage = "";
 
-    if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Check if the request method is POST and username is set
+
+    if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["username"])) {
         // Get input values
         $username = $_POST["username"];
         $password = $_POST["password"];
@@ -23,56 +26,63 @@
         // Hash the provided password
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
-        // Query the database to check the user's credentials
-        $getUserSQL = "SELECT * FROM `users` WHERE `username` = '$username'";
-        $result = mysqli_query($conn, $getUserSQL);
+        // Prepare and execute a database query to check the user's credentials
+        $stmt = $conn->prepare("SELECT * FROM `users` WHERE `username` = ?");
+        $stmt->bind_param("s", $username);
 
-        if ($result && mysqli_num_rows($result) == 1) {
-            // Fetch the user data from the result
-            $row = mysqli_fetch_assoc($result);
+        if ($stmt->execute()) {
+            // Get the result set
+            $result = $stmt->get_result();
 
-            // Verify the hashed password
-            if (password_verify($password, $row["password"])) {
-                // Login successful, store user data in session
-                $_SESSION["user_id"] = $row["id"];
-                $_SESSION["username"] = $row["username"];
-                $_SESSION["email"] = $row["email"];
+            if ($result->num_rows == 1) {
+                // Fetch the user data
+                $row = $result->fetch_assoc();
 
-                // Redirect to a protected page or wherever you want
-                header("Location: /todoList");
-                exit();
+                if (password_verify($password, $row["password"])) {
+                    // Set session variables for the user
+                    $_SESSION["user_id"] = $row["id"];
+                    $_SESSION["username"] = $row["username"];
+                    $_SESSION["email"] = $row["email"];
+
+                    // Redirect to a protected page or wherever you want
+                    header("Location: /todoList?user=".$_SESSION["username"]."");
+                    exit();
+                } else {
+                    // Password is incorrect, append an error message
+                    $errorMessage .= "Invalid password. ";
+                }
             } else {
-                // Password is incorrect, append an error message
-                $errorMessage .= "Invalid password. ";
+                // User not found, append an error message
+                $errorMessage .= "User not found. ";
             }
-        } else {
-            // User not found, append an error message
-            $errorMessage .= "User not found. ";
-        }
 
-        // Free the result set
-        mysqli_free_result($result);
+            // Free the result set
+            $result->free_result();
+        } else {
+            // Error in SQL query, append an error message
+            $errorMessage .= "Error executing the query. ";
+        }
     }
 
     // Close the database connection
-    mysqli_close($conn);
+    $conn->close();
     ?>
 
     <div class="container">
-        <img src="../img/login.png" alt="" class="bg_img">
+        <img src="/todoList/assets/login.png" alt="" class="bg_img">
         <div class="signin_card">
-            <a href="/todoList"><img src="../img/logo.png" alt=""></a>
+            <img src="/todoList/assets/logo.png" alt="">
             <h2 class="heading"><span>Welcome Back!</span></h2>
             <div class="alert_container">
                 <p class="alert"><?php echo $errorMessage ?></p>
             </div>
-            <form action="/todoList/login/index.php" method="post" class="">
+            <form action="/todoList/admin/auth/login.php" method="post" class="">
                 <input type="text" name="username" placeholder="Username" required>
                 <input type="password" name="password" placeholder="Password" required>
                 <button type="submit" class="submit">Log In</button>
             </form>
 
-            <a href="/todoList/signup" class="tosignup">Doesn't have an Account? SignUp!</a>
+            <a href="./register.php" class="tosignup">Doesn't have an Account? SignUp!</a>
         </div>
     </div>
 
@@ -220,6 +230,6 @@
             width: 100%;
         }
     </style>
-</body>
+    </body>
 
-</html>
+    </html>

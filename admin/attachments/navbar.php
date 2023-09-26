@@ -1,0 +1,117 @@
+<header class="header" id="header">
+            <div class="logo" id="logo"><a href="/todoList?user=<?php echo $_SESSION['username']?>"><img src="/todoList/assets/logo2.png" alt=""></a></div>
+            <nav>
+                <ul>
+                    <li><a href="#">Home</a></li>
+                    <li><a href="#">About</a></li>
+                    <li><a href="#">Contact</a></li>
+                </ul>
+            </nav>
+            <?php 
+            $currentURL = $_SERVER['REQUEST_URI'];
+            if (strpos($currentURL, 'profile') === false) {
+                echo '
+                 <div class="sign_box">
+                    <a href="/todoList/profile?user='.$_SESSION['username'].'" class="profile" id="profile"><i class="fa-regular fa-user"></i></a>
+                </div>
+                ';
+            }
+           
+            ?>
+        </header>
+        <style>
+            .header {
+                display: flex;
+                align-items: center;
+                position: fixed;
+                top: -85px;
+                backdrop-filter: blur(3px);
+                background-color: rgba(185, 71, 255, 0.4);
+                width: -webkit-fill-available;
+                z-index: 10;
+                margin: 1rem 5%;
+                padding: 0 1rem;
+                border-radius: 1rem;
+                border: 1px solid var(--first-color-opacity);
+                box-shadow: 0 0 10px 0 var(--first-color-opacity);
+                transition: .5s ease;
+                <?php
+                $currentURL = $_SERVER['REQUEST_URI'];
+                if (strpos($currentURL, 'profile') === false) {
+                    echo 'justify-content: space-between;';
+                }
+                ?>
+            }
+
+            .header .logo {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .header .logo img {
+                height: 4rem;
+            }
+
+            .header nav {
+                margin: 0 0 0 30rem;
+                <?php
+                if (strpos($currentURL, 'profile') === false) {
+                    echo 'margin: 0 0 0 -40rem;';
+                }
+                ?>
+            }
+
+            .header nav ul {
+                display: flex;
+                gap: 4rem;
+            }
+
+
+            .header nav ul li a {
+                color: white;
+                position: relative;
+                transition: .2s ease;
+                text-transform: uppercase;
+            }
+
+            .header nav ul li a::before {
+                content: '';
+                position: absolute;
+                bottom: -.3rem;
+                left: 0;
+                width: 0%;
+                height: 2px;
+                background: linear-gradient(90deg, var(--first-color), var(--sec-color));
+                transition: .2s ease;
+
+            }
+
+            .header nav ul li a:hover {
+                color: var(--sec-color);
+            }
+
+            .header nav ul li a:hover::before {
+                width: 120%;
+            }
+
+
+
+            .header .sign_box {
+                justify-self: end;
+            }
+
+            .profile {
+                border: 1px solid var(--sec-color);
+                color: #fff;
+                padding: 0.5rem .8rem;
+                border-radius: 0.5rem;
+                margin: 0 0.5rem 0 0;
+                transition: .2s ease;
+            }
+
+            .profile:hover,
+            .header .sign_box .sign_up:hover {
+                background: linear-gradient(90deg, var(--first-color), var(--sec-color));
+            }
+        </style>

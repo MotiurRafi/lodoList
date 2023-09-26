@@ -1,22 +1,25 @@
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SignUp</title>
-</head>
-
-
-
-<body>
     <?php
+    // Start the session
     session_start();
-    include "../db.php";
+
+    // Include the header file
+    include "../attachments/header.php";
+
+    // Check if the user is already logged in, if so, redirect them
+    if (isset($_SESSION['user_id'])) {
+        header("Location: /todoList");
+        exit();
+    }
+
+    // Include the database connection
+    include "../DB/db.php";
+
+    // Initialize an array to store error messages
     $errorMessages = [];
 
+    // Check if the form was submitted
     if ($_SERVER["REQUEST_METHOD"] == "POST") {
-        // Retrieve data from the form and set as PHP variables
+        // Retrieve form data and store them in PHP variables
         $fname = $_POST["fname"];
         $lname = $_POST["lname"];
         $bio = $_POST["bio"];
@@ -30,62 +33,80 @@
         $pass = $_POST["pass"];
         $confirm_pass = $_POST["confirm_pass"];
 
+        // Check if the password and confirm password match
         if ($pass !== $confirm_pass) {
-            $errorMessages[] = "Password and Confirm Password do not match!";
+            $errorMessages[] = "Please Confirm Your Password!";
         }
 
-        $checkUsernameSQL = "SELECT * FROM `users` WHERE `username` = '$username'";
-        $resultUsername = mysqli_query($conn, $checkUsernameSQL);
-
-        if (mysqli_num_rows($resultUsername) > 0) {
-            $errorMessages[] = "Please use a different username!";
+        $stmt = $conn->prepare("SELECT * FROM `users` WHERE `username` = ?");
+        $stmt->bind_param("s", $username);
+    
+        if ($stmt->execute()) {
+            // Store the result in a variable
+            $resultUsername = $stmt->get_result();
+    
+            if ($resultUsername->num_rows > 0) {
+                $errorMessages[] = "Please use a different USERNAME!";
+            }
         }
 
-        // Check if the email is unique
-        $checkEmailSQL = "SELECT * FROM `users` WHERE `email` = '$email'";
-        $resultEmail = mysqli_query($conn, $checkEmailSQL);
 
-        if (mysqli_num_rows($resultEmail) > 0) {
-            $errorMessages[] = "Please use a different email!";
+        // Check if the email is already in use
+        $stmt = $conn->prepare("SELECT * FROM `users` WHERE `email` = ?");
+        $stmt->bind_param("s", $email);
+    
+        if ($stmt->execute()) {
+            // Store the result in a variable
+            $resultEmail = $stmt->get_result();
+    
+            if ($resultEmail->num_rows > 0) {
+                $errorMessages[] = "Please use a different EMAIL!";
+            }
         }
 
+
+        // If there are no error messages, proceed with registration
         if (empty($errorMessages)) {
             // Hash the password
             $hashedPassword = password_hash($pass, PASSWORD_DEFAULT);
 
             // SQL query to insert data into the "users" table
-            $insertUserSQL = "INSERT INTO `users` (`username`, `email`, `password`) VALUES ('$username', '$email', '$hashedPassword')";
+            $stmt = $conn->prepare("INSERT INTO `users` (`username`, `email`, `password`) VALUES (?, ?, ?)");
+            $stmt->bind_param("sss", $username, $email, $hashedPassword);
 
-            // Execute the query
-            if (mysqli_query($conn, $insertUserSQL)) {
-                // Retrieve the last inserted user ID
-                $user_id = mysqli_insert_id($conn);
+            if ($stmt->execute()) {
+                // Get the user ID of the newly registered user
+                $user_id = $conn->insert_id;
 
-                // SQL query to insert data into the "profile" table
-                $insertProfileSQL = "INSERT INTO `profiles` (`user_id`, `first_name`, `last_name`, `bio`, `gender`, `birth_d`, `birth_m`, `birth_y`, `profession`) VALUES ('$user_id', '$fname', '$lname', '$bio', '$gender', '$day', '$month', '$year', '$profession')";
+                // SQL query to insert data into the "profiles" table
+                $stmt2 = $conn->prepare("INSERT INTO `profiles` (`user_id`, `first_name`, `last_name`, `bio`, `gender`, `birth_d`, `birth_m`, `birth_y`, `profession`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt2->bind_param("sssssisis", $user_id, $fname, $lname, $bio, $gender, $day, $month, $year, $profession);
 
-                // Execute the query
-                if (mysqli_query($conn, $insertProfileSQL)) {
+                if ($stmt2->execute()) {
+                    // Set session variables for the logged-in user
                     $_SESSION['user_id'] = $user_id;
                     $_SESSION['username'] = $username;
                     $_SESSION['email'] = $email;
+
+                    // Redirect to the user's profile page
                     header("Location: /todoList?user=$username");
                     exit();
                 } else {
-                    echo"Error inserting data into the profile table: " . mysqli_error($conn);
+                    echo "Error inserting data into the profile table: " . mysqli_error($conn);
                 }
             } else {
-                echo  "Error inserting data into the users table: " . mysqli_error($conn);
+                echo "Error inserting data into the users table: " . mysqli_error($conn);
             }
         }
     }
 
-    // Close the database connection when done
-    mysqli_close($conn);
+    // Close the database connection
+    $conn->close();
+
     ?>
     <div class="container">
         <div class="signup_card">
-            <a href="/todoList"><img src="../img/logo.png" alt=""></a>
+            <img src="/todoList/assets/logo.png" alt="">
             <h2><span>Create an Account!</span></h2>
             <div class="alert_container">
                 <?php
@@ -96,7 +117,7 @@
                 }
                 ?>
             </div>
-            <form action="/todoList/signup/index.php" method="post" class="signupform">
+            <form action="/todoList/admin/auth/register.php" method="post" class="signupform">
                 <input type="text" name="fname" placeholder="First Name" required>
                 <input type="text" name="lname" placeholder="Last Name" required>
                 <textarea name="bio" id="bio" rows="4" class="bio" placeholder="Bio"></textarea>
@@ -130,7 +151,7 @@
                     <select id="year" name="year" required>
                         <option disabled selected>Year</option>
                         <?php
-                        for ($year = 1990; $year <= 2007; $year++) {
+                        for ($year = 1989; $year <= 2012; $year++) {
                             echo "<option value='$year'>$year</option>";
                         }
                         ?>
@@ -158,7 +179,7 @@
 
                 <input type="submit" value="Submit" class="submit">
             </form>
-            <a href="/todoList/login" class="tologin">Already have an Account? LogIn!</a>
+            <a href="./login.php" class="tologin">Already have an Account? LogIn!</a>
         </div>
     </div>
 
@@ -217,7 +238,7 @@
         .container {
             height: 100vh;
             position: relative;
-            background: url(../img/signupbg.jpg);
+            background: url(/todoList/assets/signupbg.jpg);
             background-repeat: no-repeat;
             background-position: center;
             background-size: cover;
@@ -239,7 +260,6 @@
             padding: 2rem;
         }
 
-        .container .signup_card {}
 
         .container .signup_card img {
             height: 8rem;
@@ -330,7 +350,7 @@
             color: #675a9f;
         }
     </style>
-</body>
+    </body>
 
 
-</html>
+    </html>

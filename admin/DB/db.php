@@ -5,5 +5,9 @@ $pass = '';   // Change this to your database password
 $database = "todolist";       // Your database name
 
 // Create a connection to the database
-$conn = mysqli_connect($server, $username, $pass, $database);
-?>
+
+$conn = new mysqli($server , $username, $pass, $database);
+
+if ($conn -> connect_errno) {
+    echo " Failed to connect to MySQL" . $conn ->connect_error;
+};
